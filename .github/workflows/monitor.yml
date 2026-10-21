@@ -28,7 +28,6 @@ jobs:
       - run: pip install --disable-pip-version-check -r requirements.txt
       - run: python -m unittest -v
   monitor:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
