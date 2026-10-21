@@ -1,0 +1,81 @@
+name: Calendar monitor
+on:
+  schedule:
+    - cron: '2-57/5 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.py'
+      - requirements.txt
+      - '.github/workflows/monitor.yml'
+permissions:
+  contents: read
+concurrency:
+  group: calendar-monitor
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - run: python -m unittest -v
+  monitor:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check configuration and expiry
+        id: config
+        env:
+          TARGET_DATES: ${{ secrets.TARGET_DATES }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import date, datetime
+          from zoneinfo import ZoneInfo
+          if not all(os.environ.get(k) for k in ('TARGET_DATES','SMTP_USER','SMTP_PASSWORD')):
+              print('Setup incomplete. Monitoring has not started.')
+          else:
+              try:
+                  active = any(date.fromisoformat(s.strip()) >= datetime.now(ZoneInfo('Asia/Tokyo')).date() for s in os.environ['TARGET_DATES'].split(','))
+              except ValueError:
+                  raise SystemExit('Invalid TARGET_DATES format.')
+              if active:
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write('ready=true\n')
+              else:
+                  print('All target dates passed. No site access or email.')
+          PY
+      - uses: actions/setup-python@v5
+        if: steps.config.outputs.ready == 'true'
+        with:
+          python-version: '3.12'
+      - name: Install browser and dependencies
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          pip install --disable-pip-version-check -r requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Check rendered calendar
+        if: steps.config.outputs.ready == 'true'
+        env:
+          TARGET_DATES: ${{ secrets.TARGET_DATES }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          GH_TOKEN: ${{ github.token }}
+        run: python monitor.py
