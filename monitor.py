@@ -141,8 +141,14 @@ def mail(subject, body, pictures=None):
     msg.set_content(body)
     for day, png in (pictures or {}).items():
         msg.add_attachment(png, maintype='image', subtype='png', filename=day+'.png')
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30, context=ssl.create_default_context()) as smtp:
-        smtp.login(os.environ['SMTP_USER'], os.environ['SMTP_PASSWORD'].replace(' ', ''))
+    STAGE = 'connect Gmail STARTTLS'
+    with smtplib.SMTP('smtp.gmail.com', 587, timeout=30) as smtp:
+        smtp.ehlo()
+        smtp.starttls(context=ssl.create_default_context())
+        smtp.ehlo()
+        STAGE = 'authenticate Gmail'
+        smtp.login(os.environ['SMTP_USER'].strip(), ''.join(os.environ['SMTP_PASSWORD'].split()))
+        STAGE = 'deliver email'
         smtp.send_message(msg)
 
 
