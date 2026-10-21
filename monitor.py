@@ -147,7 +147,11 @@ def mail(subject, body, pictures=None):
         smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         STAGE = 'authenticate Gmail'
-        smtp.login(os.environ['SMTP_USER'].strip(), ''.join(os.environ['SMTP_PASSWORD'].split()), initial_response_ok=False)
+        smtp.user = os.environ['SMTP_USER'].strip()
+        smtp.password = ''.join(os.environ['SMTP_PASSWORD'].split())
+        if 'LOGIN' not in smtp.esmtp_features.get('auth', '').upper().split():
+            raise smtplib.SMTPNotSupportedError('LOGIN not advertised')
+        smtp.auth('LOGIN', smtp.auth_login, initial_response_ok=False)
         STAGE = 'deliver email'
         smtp.send_message(msg)
 
