@@ -19,6 +19,7 @@ from PIL import Image
 
 URL = 'https://museum-tickets.nintendo.com/calendar'
 STATE_PATH = '.monitor-state.enc'
+STAGE = 'configuration'
 JST = ZoneInfo('Asia/Tokyo')
 
 
@@ -131,6 +132,8 @@ def save_state(state, sha):
 
 
 def mail(subject, body, pictures=None):
+    global STAGE
+    STAGE = 'send email'
     msg = EmailMessage()
     msg['From'] = os.environ['SMTP_USER']
     msg['To'] = os.environ.get('NOTIFY_EMAIL') or os.environ['SMTP_USER']
@@ -144,6 +147,7 @@ def mail(subject, body, pictures=None):
 
 
 def main():
+    global STAGE
     for name in ('TARGET_DATES', 'SMTP_USER', 'SMTP_PASSWORD', 'GH_TOKEN', 'GITHUB_REPOSITORY'):
         if not os.environ.get(name):
             print('Setup incomplete: configure repository secrets. Monitoring has not started.')
@@ -153,12 +157,15 @@ def main():
     if not dates:
         print('All target dates have passed; no site request or email sent.')
         return
+    STAGE = 'read encrypted state'
     state, sha = load_state()
     old = json.loads(json.dumps(state))
     try:
+        STAGE = 'render calendar'
         current, pictures = inspect(dates)
         healthy = all(v != 'unknown' for v in current.values())
-    except Exception:
+    except Exception as error:
+        print('Calendar inspection failed: '+type(error).__name__)
         # Never print browser exceptions: selectors can contain private dates.
         current, pictures, healthy = {}, {}, False
     statuses, opened = transitions(state.get('days', {}), current)
@@ -184,6 +191,7 @@ def main():
                  '取得または判定が3回連続で失敗しました。売り切れを意味しません。\n'+stamp+'\n'+URL)
             state['error_notified'] = True
     if state != old:
+        STAGE = 'save encrypted state'
         save_state(state, sha)
     if not healthy:
         print('Calendar could not be verified. Previous availability state preserved.')
@@ -194,6 +202,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except Exception:
-        print('Monitor failed: check secrets, email authentication, and repository write permissions. No availability conclusion.')
+    except Exception as error:
+        code = getattr(error, 'smtp_code', getattr(error, 'code', None))
+        print('Monitor failed at '+STAGE+': '+type(error).__name__+((' code='+str(code)) if isinstance(code, int) else '')+'. No availability conclusion.')
         sys.exit(1)
