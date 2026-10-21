@@ -32,11 +32,18 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Stop after final monitoring day
+        id: expiry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 expiry.py
       - name: Check configuration and expiry
+        if: steps.expiry.outputs.active == 'true'
         id: config
         env:
           TARGET_DATES: ${{ secrets.TARGET_DATES }}
