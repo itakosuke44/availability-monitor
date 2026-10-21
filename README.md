@@ -25,7 +25,7 @@ No personal target dates, addresses, or screenshots should be committed. Live em
 - Closed dates are excluded. Past dates are skipped in Japan time.
 - Alerts on a new circle, suppresses continued circles, and alerts again after a confirmed sold-out state followed by a circle.
 - Availability mail includes the date, Japan timestamp, official link and a cell screenshot. Screenshots stay in memory and email, never public Actions artifacts.
-- Three consecutive retrieval failures send a separate error email; successful recovery sends another email. SMTP/setup/state failures are reported as generic failed Actions runs. Set up GitHub Actions failure notifications as a secondary check.
+- Three consecutive retrieval/interpretation failures send one separate error email. Recovery and routine successful checks do not send email; a new three-failure episode can notify again. SMTP/setup/state failures are reported as generic failed Actions runs. Set up GitHub Actions failure notifications as a secondary check.
 - The automated pixel check is not a human inspecting every run. Inspect the emailed screenshot and official page before purchasing.
 
 ## State and privacy
@@ -36,7 +36,7 @@ Deduplication state is encrypted with Fernet using a key derived from the high-e
 
 Uses only a public repository's standard `ubuntu-latest` hosted runner, with a five-minute job timeout. No larger runners, artifact uploads, dependency caches, paid APIs or external notification subscriptions. This workflow does not change billing settings. Do not enable paid services for this project.
 
-After all target dates pass, scheduled jobs do not access the calendar or send email. Disable **Actions → Calendar monitor → … → Disable workflow** to stop jobs entirely. GitHub can disable schedules after 60 days of repository inactivity.
+Monitoring ends at the end of 2026-11-19 in Japan (cutoff: 2026-11-20 00:00 JST). The program and workflow both refuse monitoring after that cutoff. The first subsequent execution disables this workflow using its temporary GitHub token with Actions write permission. Source remains available for reuse. This final disabling execution can be delayed by GitHub scheduling; no calendar requests or monitor email are sent after the cutoff. You can stop earlier via **Actions → Calendar monitor → … → Disable workflow**. For reuse, change the deadline in `expiry.py` as well as target-date secrets, then re-enable the workflow. GitHub can also disable schedules after 60 days of repository inactivity.
 
 ## Tests
 
