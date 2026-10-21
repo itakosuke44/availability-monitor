@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 from cryptography.fernet import Fernet
 from PIL import Image
+from expiry import is_active
 
 URL = 'https://museum-tickets.nintendo.com/calendar'
 STATE_PATH = '.monitor-state.enc'
@@ -158,6 +159,9 @@ def mail(subject, body, pictures=None):
 
 def main():
     global STAGE
+    if not is_active():
+        print('Monitoring period ended. No site request or email sent.')
+        return
     for name in ('TARGET_DATES', 'SMTP_USER', 'SMTP_PASSWORD', 'GH_TOKEN', 'GITHUB_REPOSITORY'):
         if not os.environ.get(name):
             print('Setup incomplete: configure repository secrets. Monitoring has not started.')
@@ -178,6 +182,9 @@ def main():
         print('Calendar inspection failed: '+type(error).__name__)
         # Never print browser exceptions: selectors can contain private dates.
         current, pictures, healthy = {}, {}, False
+    if not is_active():
+        print('Monitoring period ended during inspection. No email sent.')
+        return
     statuses, opened = transitions(state.get('days', {}), current)
     stamp = datetime.now(JST).strftime('%Y年%m月%d日 %H:%M:%S（日本時間）')
     if opened:
@@ -190,8 +197,6 @@ def main():
             mail('【設定確認】カレンダー監視の初回確認が完了しました',
                  '空き通知ではありません。初回の画面取得・判定が成功しました。\n対象日：'+', '.join(dates)+'\n確認日時：'+stamp+'\n'+URL)
             state['started'] = True
-        elif state.get('error_notified'):
-            mail('【復旧】カレンダー監視', '画面の取得・判定が復旧しました。\n'+stamp+'\n'+URL)
         state['failures'] = 0
         state['error_notified'] = False
     else:
