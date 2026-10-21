@@ -147,7 +147,7 @@ def mail(subject, body, pictures=None):
         smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         STAGE = 'authenticate Gmail'
-        smtp.login(os.environ['SMTP_USER'].strip(), ''.join(os.environ['SMTP_PASSWORD'].split()))
+        smtp.login(os.environ['SMTP_USER'].strip(), ''.join(os.environ['SMTP_PASSWORD'].split()), initial_response_ok=False)
         STAGE = 'deliver email'
         smtp.send_message(msg)
 
@@ -210,5 +210,8 @@ if __name__ == '__main__':
         main()
     except Exception as error:
         code = getattr(error, 'smtp_code', getattr(error, 'code', None))
+        if isinstance(error, smtplib.SMTPServerDisconnected):
+            detail = str(error).lower()
+            print('SMTP disconnect reason: '+('timeout' if 'timed out' in detail else 'server closed connection' if 'closed' in detail else 'connection ended'))
         print('Monitor failed at '+STAGE+': '+type(error).__name__+((' code='+str(code)) if isinstance(code, int) else '')+'. No availability conclusion.')
         sys.exit(1)
