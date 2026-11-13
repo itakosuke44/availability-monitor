@@ -8,9 +8,9 @@ import os
 
 class ExpiryTests(unittest.TestCase):
     def test_last_day_in_japan(self):
-        self.assertTrue(is_active(datetime(2026,11,19,23,59,59,tzinfo=ZoneInfo('Asia/Tokyo'))))
-        self.assertFalse(is_active(datetime(2026,11,20,0,0,0,tzinfo=ZoneInfo('Asia/Tokyo'))))
-        self.assertFalse(is_active(datetime(2026,11,19,15,0,0,tzinfo=ZoneInfo('UTC'))))
+        self.assertTrue(is_active(datetime(2026,11,24,23,59,59,tzinfo=ZoneInfo('Asia/Tokyo'))))
+        self.assertFalse(is_active(datetime(2026,11,25,0,0,0,tzinfo=ZoneInfo('Asia/Tokyo'))))
+        self.assertFalse(is_active(datetime(2026,11,24,15,0,0,tzinfo=ZoneInfo('UTC'))))
 
     def test_expiry_disables_only_this_workflow(self):
         with tempfile.TemporaryDirectory() as folder:
