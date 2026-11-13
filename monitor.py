@@ -153,7 +153,7 @@ def mail(subject, body, pictures=None, action_url=None):
             '公式チケットカレンダーを開く</a></p>'
             '<p><strong>大人2名分の在庫と時間帯は未確認です。'
             '購入画面で確認してください。</strong></p>'
-            '<p>' + escape(body).replace('\\n', '<br>') + '</p>'
+            '<p>' + escape(body).replace('\n', '<br>') + '</p>'
             '</body></html>',
             subtype='html')
     for day, png in (pictures or {}).items():
