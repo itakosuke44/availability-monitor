@@ -4,7 +4,7 @@ from datetime import datetime
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
-END_EXCLUSIVE = datetime(2026, 11, 20, tzinfo=ZoneInfo('Asia/Tokyo'))
+END_EXCLUSIVE = datetime(2026, 11, 25, tzinfo=ZoneInfo('Asia/Tokyo'))
 
 
 def is_active(now=None):
