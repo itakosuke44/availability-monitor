@@ -10,6 +10,7 @@ import ssl
 import sys
 from datetime import date, datetime
 from email.message import EmailMessage
+from html import escape
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -132,7 +133,7 @@ def save_state(state, sha):
     github('PUT', payload)
 
 
-def mail(subject, body, pictures=None):
+def mail(subject, body, pictures=None, action_url=None):
     global STAGE
     STAGE = 'send email'
     msg = EmailMessage()
@@ -140,6 +141,21 @@ def mail(subject, body, pictures=None):
     msg['To'] = os.environ.get('NOTIFY_EMAIL') or os.environ['SMTP_USER']
     msg['Subject'] = subject
     msg.set_content(body)
+    if action_url:
+        # Prominent one-tap official calendar link for phone email clients.
+        safe_url = escape(action_url, quote=True)
+        msg.add_alternative(
+            '<html><body>'
+            '<p><a href="' + safe_url + '" '
+            'style="display:inline-block;padding:15px 20px;'
+            'background:#e60012;color:white;text-decoration:none;'
+            'font-weight:bold;border-radius:6px">'
+            '公式チケットカレンダーを開く</a></p>'
+            '<p><strong>大人2名分の在庫と時間帯は未確認です。'
+            '購入画面で確認してください。</strong></p>'
+            '<p>' + escape(body).replace('\\n', '<br>') + '</p>'
+            '</body></html>',
+            subtype='html')
     for day, png in (pictures or {}).items():
         msg.add_attachment(png, maintype='image', subtype='png', filename=day+'.png')
     STAGE = 'connect Gmail STARTTLS'
@@ -188,9 +204,15 @@ def main():
     statuses, opened = transitions(state.get('days', {}), current)
     stamp = datetime.now(JST).strftime('%Y年%m月%d日 %H:%M:%S（日本時間）')
     if opened:
-        mail('【空き枠通知】ニンテンドーミュージアム',
-             '\n'.join(d+'：○（先着順販売）' for d in opened)+'\n確認日時：'+stamp+'\n'+URL,
-             {d: pictures[d] for d in opened})
+        day_labels = '・'.join(f'{int(d[5:7])}/{int(d[8:])}' for d in opened)
+        mail('【空き枠通知】'+day_labels+'｜ニンテンドーミュージアム',
+             '【公式カレンダーを開く】\n'+URL+'\n\n'
+             '空き表示（○）を検知した日：\n'
+             +'\n'.join(d+'：○' for d in opened)
+             +'\n\n※大人2名分の残席と時間帯は未確認です。'
+             +'ログインして人数・日時を選び、購入を完了してください。'
+             +'\n確認日時：'+stamp,
+             {d: pictures[d] for d in opened}, action_url=URL)
     state['days'] = statuses
     if healthy:
         if not state.get('started'):
